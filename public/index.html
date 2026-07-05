@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grand CEO Hotel - Dashboard</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            background-image: linear-gradient(rgba(15, 15, 26, 0.85), rgba(15, 15, 26, 0.90)), 
+                              url('https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=2070&auto=format&fit=crop');
+            background-size: cover; background-position: center; background-attachment: fixed;
+            margin: 0; padding: 0; box-sizing: border-box;
+        }
+        *, *::before, *::after { box-sizing: border-box; } 
+        
+        .tab-menu { display: flex; gap: 10px; margin-bottom: 25px; background: rgba(255, 255, 255, 0.03); padding: 10px; border-radius: 8px; border: 1px solid rgba(214, 175, 55, 0.2); }
+        .tab-btn { background: transparent; color: #fff; border: 1px solid transparent; padding: 10px 20px; cursor: pointer; border-radius: 5px; font-weight: 600; transition: all 0.3s ease; }
+        .tab-btn.active { background: #d4af37; color: #1a1a2e; }
+        .tab-btn:hover:not(.active) { background: rgba(214, 175, 55, 0.1); border-color: #d4af37; color: #d4af37; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; width: 100%; }
+        
+        .forgot-password { color: #aaa; font-size: 12px; text-decoration: none; margin: 10px 0 15px 0; display: inline-block; transition: 0.3s; }
+        .forgot-password:hover { color: #d4af37; text-decoration: underline; }
+        .icon-header { font-size: 40px !important; color: #d4af37; margin-bottom: 5px; }
+        .auth-wrapper { background: transparent !important; min-height: 100vh; }
+        .overlay-panel .ghost { transition: all 0.3s ease; background-color: transparent; }
+        .overlay-panel .ghost:hover { background-color: #1a1a2e !important; color: #d4af37 !important; border-color: #1a1a2e !important; }
+        .eye-icon { cursor: pointer; user-select: none; position: absolute; right: 15px; top: 50%; transform: translateY(-50%); width: 24px; text-align: center; color: #aaa; transition: color 0.3s; }
+        .eye-icon:hover { color: #d4af37; }
+        .password-input-locked { width: 100% !important; padding-right: 45px !important; box-sizing: border-box !important; }
+        
+        .welcome-banner { background: linear-gradient(135deg, rgba(212, 175, 55, 0.15), rgba(26, 26, 46, 0.8)); border-left: 5px solid #d4af37; padding: 20px; border-radius: 8px; margin-bottom: 25px; color: #fff; width: 100%; }
+        .foto-kamar-thumbnail { width: 60px; height: 45px; object-fit: cover; border-radius: 5px; border: 1px solid #d4af37; }
+        
+        .card-luxury { width: 100%; background: #1a1a2e; padding: 20px; border-radius: 8px; border: 1px solid rgba(214,175,55,0.3); overflow: hidden; }
+        .table-responsive { overflow-x: auto; width: 100%; }
+        table { width: 100%; min-width: 600px; border-collapse: collapse; margin-top: 10px; background: rgba(0, 0, 0, 0.2); border-radius: 8px; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid rgba(214,175,55,0.2); color: #fff; vertical-align: middle; font-size: 13px; }
+        th { background: rgba(0,0,0,0.6); color: #d4af37; font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: 1px; white-space: nowrap; }
+        tbody tr:hover { background: rgba(214,175,55,0.1); }
+        
+        .fasilitas-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; width: 100%; }
+        @media (max-width: 992px) { .fasilitas-grid { grid-template-columns: repeat(2, 1fr); } }
+        .img-container { position: relative; border-radius: 8px; overflow: hidden; border: 1px solid rgba(214,175,55,0.5); }
+        .img-container img { width: 100%; height: 150px; object-fit: cover; display: block; transition: transform 0.3s ease; }
+        .img-container:hover img { transform: scale(1.05); }
+        .img-label { position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.8); padding: 5px 10px; border-radius: 4px; font-size: 11px; color: #d4af37; font-weight: bold; border: 1px solid rgba(214,175,55,0.3); pointer-events: none; }
+    </style>
+</head>
+<body>
+
+    <div class="auth-wrapper" id="authWrapper">
+        <div class="auth-container" id="authContainer" style="box-shadow: 0 14px 28px rgba(0,0,0,0.5), 0 10px 10px rgba(0,0,0,0.5);">
+            <div class="form-container sign-up-container">
+                <form id="formUser">
+                    <span class="material-symbols-outlined icon-header">diamond</span>
+                    <h1 style="color: #d4af37;">Buat Akun</h1>
+                    <span class="subtitle" style="margin-bottom: 15px;">Daftar untuk akses dashboard</span>
+                    <input type="text" id="name" placeholder="Nama Lengkap" required>
+                    <input type="email" id="email" placeholder="Email" required>
+                    <div class="password-box" style="position: relative; width: 100%;">
+                        <input type="password" id="password" class="password-input-locked" placeholder="Password" required>
+                        <span id="togglePassword" class="material-symbols-outlined eye-icon">visibility_off</span>
+                    </div>
+                    <button type="submit" class="btn-gold" style="margin-top: 10px;">Daftar Sekarang</button>
+                </form>
+            </div>
+
+            <div class="form-container sign-in-container">
+                <form id="formLogin">
+                    <span class="material-symbols-outlined icon-header">admin_panel_settings</span>
+                    <h1 style="color: #d4af37;">Sign in</h1>
+                    <span class="subtitle" style="margin-bottom: 15px;">Gunakan akun hotel Anda</span>
+                    <input type="email" id="loginEmail" placeholder="Email" required>
+                    <div class="password-box" style="position: relative; width: 100%;">
+                        <input type="password" id="loginPassword" class="password-input-locked" placeholder="Password" required>
+                        <span id="toggleLoginPassword" class="material-symbols-outlined eye-icon">visibility_off</span>
+                    </div>
+                    <a href="#" class="forgot-password" onclick="lupaPassword(event)">Lupa password Anda?</a>
+                    <button type="submit" class="btn-gold">Login</button>
+                </form>
+            </div>
+
+            <div class="overlay-container">
+                <div class="overlay" style="background: linear-gradient(to right, #b8860b, #d4af37);">
+                    <div class="overlay-panel overlay-left">
+                        <span class="material-symbols-outlined" style="font-size: 50px; margin-bottom: 10px;">key</span>
+                        <h1 style="color: #1a1a2e;">Sudah Punya Akun?</h1>
+                        <p style="color: #1a1a2e; font-weight: 500;">Silakan login dengan info personal Anda untuk masuk ke sistem hotel.</p>
+                        <button class="ghost" id="signInBtn" style="border-color: #1a1a2e; color: #1a1a2e;">Sign In</button>
+                    </div>
+                    <div class="overlay-panel overlay-right">
+                        <span class="material-symbols-outlined" style="font-size: 50px; margin-bottom: 10px;">hotel_class</span>
+                        <h1 style="color: #1a1a2e;">Halo, CEO!</h1>
+                        <p style="color: #1a1a2e; font-weight: 500;">Belum punya akun admin? Daftarkan diri Anda dan mulai kelola hotel.</p>
+                        <button class="ghost" id="signUpBtn" style="border-color: #1a1a2e; color: #1a1a2e;">Sign Up</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="dashboardWrapper" style="display: none;">
+        <div class="dashboard-header">
+            <h2 id="welcomeTitle" style="margin: 0; background: linear-gradient(120deg, #d4af37 30%, #ffffff 50%, #d4af37 70%); background-size: 200% auto; color: transparent; -webkit-background-clip: text; background-clip: text; animation: shine 3s linear infinite;">
+                Welcome To Website Grand CEO Hotel
+            </h2>
+            <style>@keyframes shine { to { background-position: 200% center; } }</style>
+            <div style="display: flex; align-items: center;">
+                <button onclick="lihatNotifikasi()" style="background: none; border: none; font-size: 24px; cursor: pointer; position: relative; margin-right: 15px;">
+                    🔔 <span id="badgeNotif" style="position: absolute; top: -5px; right: -5px; background-color: #dc3545; color: white; border-radius: 50%; padding: 2px 6px; font-size: 10px; font-weight: bold; display: none;">0</span>
+                </button>
+                <button id="btnLogout" class="btn-danger" onclick="logout()">Logout</button>
+            </div>
+        </div>
+
+        <div class="container" style="width: 100%; max-width: 1200px; margin: auto;">
+            <div class="tab-menu">
+                <button class="tab-btn active" onclick="switchTab('tab-dashboard')">Dashboard</button>
+                <button class="tab-btn" id="menuKamarTab" onclick="switchTab('tab-kamar')">Kamar</button>
+                <button class="tab-btn" id="menuCustomerTab" onclick="switchTab('tab-customer')">Customers</button>
+            </div>
+
+            <div id="tab-dashboard" class="tab-content active">
+                
+                <div class="summary-container" id="adminSummaryBox" style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; width: 100%;">
+                    <div class="summary-box" style="flex: 1; min-width: 200px; background: rgba(0, 242, 254, 0.1); padding: 20px; border-radius: 10px; border-bottom: 4px solid #00f2fe; text-align: center;">
+                        <h3 style="margin: 0; font-size: 14px; color: #aaa;">Total Reservasi</h3>
+                        <p id="sumTotal" style="margin: 10px 0 0 0; font-size: 28px; font-weight: bold; color: #00f2fe;">0</p>
+                    </div>
+                    <div class="summary-box" style="flex: 1; min-width: 200px; background: rgba(40, 167, 69, 0.1); padding: 20px; border-radius: 10px; border-bottom: 4px solid #28a745; text-align: center;">
+                        <h3 style="margin: 0; font-size: 14px; color: #aaa;">Kamar Aktif</h3>
+                        <p id="sumConfirmed" style="margin: 10px 0 0 0; font-size: 28px; font-weight: bold; color: #28a745;">0</p>
+                    </div>
+                    <div class="summary-box" style="flex: 1; min-width: 200px; background: rgba(255, 193, 7, 0.1); padding: 20px; border-radius: 10px; border-bottom: 4px solid #ffc107; text-align: center;">
+                        <h3 style="margin: 0; font-size: 14px; color: #aaa;">Menunggu Bayar</h3>
+                        <p id="sumPending" style="margin: 10px 0 0 0; font-size: 28px; font-weight: bold; color: #ffc107;">0</p>
+                    </div>
+                    <div class="summary-box" style="flex: 1; min-width: 200px; background: rgba(212, 175, 55, 0.1); padding: 20px; border-radius: 10px; border-bottom: 4px solid #d4af37; text-align: center;">
+                        <h3 style="margin: 0; font-size: 14px; color: #aaa;">Total Pendapatan</h3>
+                        <p id="sumPendapatan" style="margin: 10px 0 0 0; font-size: 24px; font-weight: bold; color: #d4af37;">Rp 0</p>
+                    </div>
+                </div>
+
+                <div class="summary-container" id="customerSummaryBox" style="display: none; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; width: 100%;">
+                    <div class="summary-box" style="flex: 1; min-width: 250px; background: rgba(212, 175, 55, 0.1); padding: 20px; border-radius: 10px; border-bottom: 4px solid #d4af37; text-align: center;">
+                        <h3 style="margin: 0; font-size: 14px; color: #aaa;">Total Riwayat Menginap</h3>
+                        <p id="custSumTotal" style="margin: 10px 0 0 0; font-size: 28px; font-weight: bold; color: #d4af37;">0 Kali</p>
+                    </div>
+                    <div class="summary-box" style="flex: 1; min-width: 250px; background: rgba(40, 167, 69, 0.1); padding: 20px; border-radius: 10px; border-bottom: 4px solid #28a745; text-align: center;">
+                        <h3 style="margin: 0; font-size: 14px; color: #aaa;">Status Booking Terdekat</h3>
+                        <p id="custSumStatus" style="margin: 10px 0 0 0; font-size: 22px; font-weight: bold; color: #28a745; padding-top: 5px;">Tidak Ada Aktif</p>
+                    </div>
+                    <div class="summary-box" style="flex: 1; min-width: 250px; background: rgba(0, 242, 254, 0.1); padding: 20px; border-radius: 10px; border-bottom: 4px solid #00f2fe; text-align: center;">
+                        <h3 style="margin: 0; font-size: 14px; color: #aaa;">CEO Loyalty Points</h3>
+                        <p id="custSumPoints" style="margin: 10px 0 0 0; font-size: 28px; font-weight: bold; color: #00f2fe;">0 Pts</p>
+                    </div>
+                </div>
+
+                <div class="welcome-banner" id="customerWelcomeBanner" style="display: none;">
+                    <h3 style="margin: 0 0 5px 0; color: #d4af37;">🌟 CEO Member Exclusive Benefit</h3>
+                    <p style="margin: 0; font-size: 14px; color: #ddd;">Selamat datang di layanan eksklusif kami. Nikmati fasilitas prioritas check-in dan kumpulkan Poin CEO di setiap pesanan.</p>
+                </div>
+
+                <div class="card-luxury" style="margin-bottom: 30px;">
+                    <h3 style="margin: 0 0 15px 0; color: #d4af37; display: flex; align-items: center; gap: 10px;">
+                        <span class="material-symbols-outlined">hotel</span> Fasilitas & Kenyamanan Eksklusif
+                    </h3>
+                    <div class="fasilitas-grid">
+                        <div class="img-container">
+                            <img src="https://images.unsplash.com/photo-1611892440504-42a792e24d32?q=80&w=500" alt="Kamar Mewah">
+                            <span class="img-label">Kamar Mewah</span>
+                        </div>
+                        <div class="img-container">
+                            <img src="https://images.unsplash.com/photo-1584622650111-993a426fbf0a?q=80&w=500" alt="Kamar Mandi Spa">
+                            <span class="img-label">Kamar Mandi Spa</span>
+                        </div>
+                        <div class="img-container">
+                            <img src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=500" alt="Gourmet Resto">
+                            <span class="img-label">Gourmet Resto</span>
+                        </div>
+                        <div class="img-container">
+                            <img src="https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?q=80&w=500" alt="Kolam Renang VIP">
+                            <span class="img-label">Kolam Renang VIP</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="bookingSectionContainer" style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px; margin-bottom: 30px; align-items: start; width: 100%;">
+                    
+                    <div class="card-luxury">
+                        <h3 id="bookingFormTitle">Buat Reservasi</h3>
+                        <form id="formReservasi">
+                            <div class="form-group" id="customerSelectGroup">
+                                <label>Customer</label>
+                                <select id="resUserId"></select>
+                            </div>
+                            <div class="form-group">
+                                <label>Kamar</label>
+                                <select id="resRoomId" required></select>
+                            </div>
+                            <div class="form-group">
+                                <label>Check In</label>
+                                <input type="date" id="resCheckIn" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Check Out</label>
+                                <input type="date" id="resCheckOut" required>
+                            </div>
+                            <div style="margin-top: 10px; margin-bottom: 15px; padding: 15px; background: rgba(0, 0, 0, 0.2); border-radius: 8px; border: 1px solid rgba(214, 175, 55, 0.3); text-align: right;">
+                                <span style="color: #aaa; font-size: 13px;">Total Estimasi Biaya:</span>
+                                <h3 id="labelTotalHarga" style="margin: 5px 0 0 0; color: #d4af37; font-size: 24px;">Rp 0</h3>
+                            </div>
+                            <button type="submit" class="btn-gold" style="width:100%;">+ Booking Sekarang</button>
+                        </form>
+
+                        <div style="margin-top: 25px; padding: 15px; background: rgba(255, 255, 255, 0.03); border-radius: 8px; border: 1px dashed #d4af37; text-align: center;">
+                            <span class="material-symbols-outlined" style="color: #d4af37; font-size: 30px;">support_agent</span>
+                            <h4 style="margin: 5px 0; color: #fff;">Butuh Bantuan Personal?</h4>
+                            <p style="font-size: 12px; color: #aaa; margin-bottom: 10px;">Admin kami siap membantu 24/7 untuk kebutuhan khusus Anda.</p>
+                            <a href="javascript:void(0)" onclick="hubungiAdmin()" style="color: #d4af37; font-size: 13px; text-decoration: none; font-weight: bold;">Hubungi Admin ➔</a>
+                        </div>
+                    </div>
+
+                    <div class="card-luxury table-responsive">
+                        <h3 id="bookingTableTitle">Daftar Transaksi Reservasi</h3>
+                        <table>
+                            <thead>
+                                <tr id="bookingTableHeaderRow">
+                                    <th id="thCustomerCol">Customer</th><th>Kamar</th><th>Check In</th><th>Check Out</th><th>Status</th><th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableReservasi">
+                                <tr id="emptyReservasi">
+                                    <td colspan="6" style="text-align: center; padding: 40px; color: #888; font-style: italic;">
+                                        Belum ada riwayat pesanan. Yuk, booking kamar pertamamu sekarang!
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card-luxury table-responsive" id="paymentSectionBox" style="margin-bottom: 30px;">
+                    <h3>Data Transaksi Pembayaran</h3>
+                    <div id="sectionEditPayment" style="display: none; background: rgba(40, 167, 69, 0.1); padding: 15px; border-left: 4px solid #28a745; margin-bottom: 20px; border-radius: 8px;">
+                        <h4 style="margin-top: 0; color: #28a745;">Edit Data Pembayaran</h4>
+                        <form id="formEditPayment" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                            <input type="hidden" id="editIdPayment">
+                            <div class="form-group" style="margin: 0; flex: 1;">
+                                <select id="editMetodePayment" required>
+                                    <option value="Transfer Bank">Transfer Bank</option>
+                                    <option value="E-Wallet">E-Wallet</option>
+                                    <option value="Tunai">Tunai</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin: 0; flex: 1;">
+                                <select id="editStatusPayment" required>
+                                    <option value="success">SUCCESS</option>
+                                    <option value="pending">PENDING</option>
+                                    <option value="failed">FAILED</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn-gold" style="margin: 0;">Simpan</button>
+                            <button type="button" onclick="batalEditPayment()" class="btn-danger" style="margin: 0;">Batal</button>
+                        </form>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID Bayar</th><th>Customer</th><th>Total Bayar</th><th>Metode</th><th>Status</th><th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablePayment"></tbody>
+                    </table>
+                </div>
+
+                <div id="reviewSectionContainer" style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px; margin-bottom: 30px; align-items: start; width: 100%;">
+                    
+                    <div class="card-luxury" id="customerWriteReviewBox" style="display: none;">
+                        <h3>Bagikan Pengalaman Anda</h3>
+                        <form id="formTambahReview">
+                            <div class="form-group">
+                                <label>Pilih Kamar (Telah Checkout)</label>
+                                <select id="revRoomId" required></select>
+                            </div>
+                            <div class="form-group">
+                                <label>Berikan Rating</label>
+                                <select id="revRating" required>
+                                    <option value="5">⭐⭐⭐⭐⭐ (Sangat Puas)</option>
+                                    <option value="4">⭐⭐⭐⭐ (Puas)</option>
+                                    <option value="3">⭐⭐⭐ (Cukup)</option>
+                                    <option value="2">⭐⭐ (Kurang)</option>
+                                    <option value="1">⭐ (Buruk)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Ulasan Anda</label>
+                                <textarea id="revComment" placeholder="Ceritakan kenyamanan..." required style="width: 100%; height: 80px; padding: 10px; border-radius: 5px; background: #222; border: 1px solid #444; color: #fff; font-family: inherit; resize: none;"></textarea>
+                            </div>
+                            <button type="submit" class="btn-gold" style="width: 100%; margin-top: 5px;">Kirim Ulasan</button>
+                        </form>
+                    </div>
+
+                    <div class="card-luxury table-responsive">
+                        <h3>Ulasan Customer (Reviews)</h3>
+                        <table>
+                            <thead>
+                                <tr id="reviewTableHeaderRow">
+                                    <th id="thRevCustomerCol">Customer</th><th>Kamar</th><th>Rating</th><th>Komentar</th><th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableReview">
+                                <tr id="emptyReview">
+                                    <td colspan="5" style="text-align: center; padding: 40px; color: #888; font-style: italic;">
+                                        Belum ada ulasan yang diberikan.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+            <div id="tab-kamar" class="tab-content">
+                <div class="card-luxury table-responsive">
+                    <h3>Data & Katalog Kamar</h3>
+                    <form id="formRoom" style="margin-bottom: 20px;">
+                        <div class="form-group"><input type="text" id="noKamar" placeholder="No. Kamar (ex: 101)" required></div>
+                        <div class="form-group">
+                            <select id="tipeKamar" required>
+                                <option value="Standard">Standard</option>
+                                <option value="Deluxe">Deluxe</option>
+                                <option value="Suite">Suite</option>
+                                <option value="Presidential">Presidential</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><input type="number" id="hargaKamar" placeholder="Harga (ex: 500000)" required></div>
+                        <div class="form-group"><input type="url" id="fotoKamarInput" placeholder="URL Link Gambar/Foto (Opsional)"></div>
+                        <button type="submit" class="btn-gold" id="btnTambahKamar">+ Tambah Kamar Baru</button>
+                    </form>
+
+                    <div id="sectionEditRoom" style="display: none; background: rgba(212, 175, 55, 0.1); padding: 15px; border-left: 4px solid #d4af37; margin-bottom: 20px; border-radius: 8px;">
+                        <h4 style="margin-top: 0; color: #d4af37;">Edit Data Kamar</h4>
+                        <form id="formEditRoom">
+                            <input type="hidden" id="editIdKamar">
+                            <div class="form-group"><label>Nomor</label><input type="text" id="editNoKamar" required></div>
+                            <div class="form-group">
+                                <label>Tipe Kamar</label>
+                                <select id="editTipeKamar" required>
+                                    <option value="Standard">Standard</option>
+                                    <option value="Deluxe">Deluxe</option>
+                                    <option value="Suite">Suite</option>
+                                    <option value="Presidential">Presidential</option>
+                                </select>
+                            </div>
+                            <div class="form-group"><label>Harga</label><input type="number" id="editHargaKamar" required></div>
+                            <div class="form-group"><label>URL Foto</label><input type="url" id="editFotoKamar"></div>
+                            <div class="form-group">
+                                <label>Status</label>
+                                <select id="editStatusKamar" required>
+                                    <option value="tersedia">Tersedia</option>
+                                    <option value="terisi">Terisi</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn-gold">Simpan Perubahan</button>
+                            <button type="button" onclick="batalEditRoom()" class="btn-danger">Batal</button>
+                        </form>
+                    </div>
+
+                    <table>
+                        <thead><tr><th>Foto</th><th>No. Kamar</th><th>Tipe Kamar</th><th>Harga</th><th>Status</th><th>Aksi</th></tr></thead>
+                        <tbody id="tableRoom"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="tab-customer" class="tab-content">
+                <div class="card-luxury table-responsive">
+                    <h3>Data Manajemen Customer</h3>
+                    <table>
+                        <thead><tr><th>Nama</th><th>Email</th><th>Role</th><th>Aksi</th></tr></thead>
+                        <tbody id="tableUser"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. FITUR NOTIFIKASI SOCKET.IO & UI DASAR
+        // ==========================================
+        const socket = io();
+        window.notifList = [];
+
+        socket.on("pesananBaru", (data) => {
+            if (localStorage.getItem('role') !== 'admin') return; 
+
+            window.notifList.push(data);
+            const badge = document.getElementById('badgeNotif');
+            if(badge) {
+                badge.style.display = 'inline-block';
+                badge.innerText = window.notifList.length;
+            }
+            Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, icon: 'info', title: 'Ada Pesanan Baru!' });
+            muatTabelReservasi();
+        });
+
+        function lihatNotifikasi() {
+            if(!window.notifList || window.notifList.length === 0) {
+                Swal.fire({ icon: 'info', title: 'Tidak Ada Notifikasi', text: 'Belum ada pesan baru untuk Anda saat ini.', background: '#1a1a2e', color: '#fff', confirmButtonColor: '#d4af37' });
+            } else {
+                let msgs = window.notifList.map(n => `<b>ID Pesanan: #${n.bookingId}</b> | Check-in: ${n.checkIn}`).join('<br><hr>');
+                Swal.fire({ title: 'Notifikasi Pesanan', html: msgs, icon: 'info' }).then(() => {
+                    window.notifList = [];
+                    const badge = document.getElementById('badgeNotif');
+                    if(badge) badge.style.display = 'none';
+                });
+            }
+        }
+
+        function hubungiAdmin() {
+            Swal.fire('Hubungi Admin', 'Silakan hubungi WhatsApp: <b>0812-3456-7890</b><br>Email: <b>admin@grandceo.com</b>', 'info');
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            
+            document.getElementById(tabId).classList.add('active');
+            const clickedBtn = document.querySelector(`button[onclick="switchTab('${tabId}')"]`);
+            if(clickedBtn) clickedBtn.classList.add('active');
+        }
+
+        function terapkanHakAksesUI(role, nama) {
+            document.getElementById('welcomeTitle').innerText = `Welcome To Dashboard, ${nama}`;
+            
+            const thCustomerCol = document.getElementById('thCustomerCol');
+            const thRevCustomerCol = document.getElementById('thRevCustomerCol');
+            const reviewContainer = document.getElementById('reviewSectionContainer');
+
+            if (role === 'customer') {
+                document.getElementById('adminSummaryBox').style.display = 'none';
+                document.getElementById('customerSummaryBox').style.display = 'flex';
+                document.getElementById('customerWelcomeBanner').style.display = 'block';
+                document.getElementById('paymentSectionBox').style.display = 'none';
+                document.getElementById('menuCustomerTab').style.display = 'none';
+                document.getElementById('formRoom').style.display = 'none'; // Sembunyikan form tambah kamar
+                document.getElementById('customerSelectGroup').style.display = 'none';
+                document.getElementById('bookingFormTitle').innerText = "Buat Pesanan Kamar";
+                document.getElementById('bookingTableTitle').innerText = "Riwayat Pesanan Saya";
+                
+                document.getElementById('customerWriteReviewBox').style.display = 'block';
+                document.getElementById('reviewSectionContainer').style.gridTemplateColumns = "1fr 2fr";
+                
+                if(thCustomerCol) thCustomerCol.style.display = 'none';
+                if(thRevCustomerCol) thRevCustomerCol.style.display = 'none';
+                
+            } else {
+                document.getElementById('adminSummaryBox').style.display = 'flex';
+                document.getElementById('customerSummaryBox').style.display = 'none';
+                document.getElementById('customerWelcomeBanner').style.display = 'none';
+                document.getElementById('paymentSectionBox').style.display = 'block';
+                document.getElementById('menuCustomerTab').style.display = 'block';
+                document.getElementById('formRoom').style.display = 'block';
+                document.getElementById('customerSelectGroup').style.display = 'block';
+                document.getElementById('bookingFormTitle').innerText = "Buat Reservasi";
+                document.getElementById('bookingTableTitle').innerText = "Daftar Transaksi Reservasi";
+                
+                document.getElementById('customerWriteReviewBox').style.display = 'none';
+                document.getElementById('reviewSectionContainer').style.gridTemplateColumns = "1fr";
+                
+                if(thCustomerCol) thCustomerCol.style.display = 'table-cell';
+                if(thRevCustomerCol) thRevCustomerCol.style.display = 'table-cell';
+            }
+            
+            muatDropdownPilihan();
+            muatTabelReservasi();
+            muatTabelReview(); 
+            
+            // PERBAIKAN: KAMAR DITAMPILKAN KE SEMUA ROLE
+            muatTabelKamar(); 
+
+            if (role === 'admin') {
+                muatTabelPayment();
+                muatTabelUser(); 
+            }
+        }
+
+        // ==========================================
+        // 2. FUNGSI PEMANGGILAN DATA & LOGIKA
+        // ==========================================
+        async function muatTabelKamar() {
+            try {
+                const token = localStorage.getItem('token');
+                const role = localStorage.getItem('role'); // Ambil role untuk cek tombol
+                const res = await fetch('/api/rooms', { headers: { 'Authorization': `Bearer ${token}` } }); 
+                const resData = await res.json();
+                
+                const tbody = document.getElementById('tableRoom');
+                if (tbody && resData.status === 'success') {
+                    tbody.innerHTML = '';
+                    if (resData.data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Belum ada data kamar.</td></tr>';
+                        return;
+                    }
+                    resData.data.forEach(room => {
+                        let imgDefault = 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?q=80&w=200&auto=format&fit=crop';
+                        let imgTampil = room.foto_kamar && room.foto_kamar.trim() !== '' ? room.foto_kamar : imgDefault;
+                        let textStatus = room.status.charAt(0).toUpperCase() + room.status.slice(1);
+                        let warnaStatus = room.status.toLowerCase() === 'tersedia' ? '#28a745' : '#dc3545';
+
+                        // PERBAIKAN: Sembunyikan tombol Edit/Hapus jika yang login Customer
+                        let actionButtons = '-';
+                        if (role === 'admin') {
+                            actionButtons = `
+                                <button onclick="bukaEditRoom('${room.id}', '${room.nomor_kamar}', '${room.tipe_kamar}', '${room.harga}', '${room.foto_kamar || ''}', '${room.status}')" class="btn-gold" style="padding:4px 8px; font-size:11px;">Edit</button>
+                                <button onclick="hapusRoom('${room.id}')" class="btn-danger" style="padding:4px 8px; font-size:11px;">Hapus</button>
+                            `;
+                        }
+
+                        let row = `<tr>
+                            <td><img src="${imgTampil}" class="foto-kamar-thumbnail" alt="Foto Kamar"></td>
+                            <td>${room.nomor_kamar || '-'}</td>
+                            <td>${room.tipe_kamar}</td>
+                            <td>Rp ${parseInt(room.harga).toLocaleString('id-ID')}</td>
+                            <td><span style="color: ${warnaStatus}; font-weight:bold;">${textStatus}</span></td>
+                            <td>${actionButtons}</td>
+                        </tr>`;
+                        tbody.innerHTML += row;
+                    });
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        function bukaEditRoom(id, nomor, tipe, harga, foto, status) {
+            document.getElementById('sectionEditRoom').style.display = 'block';
+            document.getElementById('editIdKamar').value = id;
+            document.getElementById('editNoKamar').value = nomor;
+            document.getElementById('editTipeKamar').value = tipe;
+            document.getElementById('editHargaKamar').value = harga;
+            document.getElementById('editFotoKamar').value = foto;
+            document.getElementById('editStatusKamar').value = status.toLowerCase();
+        }
+
+        function batalEditRoom() {
+            document.getElementById('sectionEditRoom').style.display = 'none';
+            document.getElementById('formEditRoom').reset();
+        }
+
+        async function hapusRoom(id) {
+            if(!confirm('Yakin ingin menghapus kamar ini?')) return;
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch(`/api/rooms/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if(res.ok) {
+                    Swal.fire('Terhapus', 'Data kamar berhasil dihapus.', 'success');
+                    muatTabelKamar();
+                    muatDropdownPilihan();
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        async function muatDropdownPilihan() {
+            try {
+                const token = localStorage.getItem('token');
+                const resRooms = await fetch('/api/rooms', { headers: { 'Authorization': `Bearer ${token}` } });
+                const dataRooms = await resRooms.json();
+                const selectRoom = document.getElementById('resRoomId');
+                
+                if (selectRoom && dataRooms.status === 'success') {
+                    selectRoom.innerHTML = '<option value="">-- Pilih Kamar --</option>';
+                    dataRooms.data.forEach(room => {
+                        selectRoom.innerHTML += `<option value="${room.id}" data-harga="${room.harga}">Kamar ${room.nomor_kamar} (${room.tipe_kamar}) - Rp ${parseInt(room.harga).toLocaleString('id-ID')}</option>`;
+                    });
+                }
+
+                if (localStorage.getItem('role') === 'admin') {
+                    const resUsers = await fetch('/users', { headers: { 'Authorization': `Bearer ${token}` } });
+                    const dataUsers = await resUsers.json();
+                    const selectUser = document.getElementById('resUserId');
+                    if (selectUser && dataUsers.status === 'success') {
+                        selectUser.innerHTML = '<option value="">-- Pilih Customer --</option>';
+                        dataUsers.data.forEach(u => {
+                            if (u.role === 'customer') {
+                                selectUser.innerHTML += `<option value="${u.id}">${u.nama} (${u.email})</option>`;
+                            }
+                        });
+                    }
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        async function muatTabelReservasi() {
+            try {
+                const role = localStorage.getItem('role');
+                const userId = localStorage.getItem('userId');
+                const token = localStorage.getItem('token');
+                
+                const res = await fetch(`/api/reservasi?role=${role}&userId=${userId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const resData = await res.json();
+                
+                const tbody = document.getElementById('tableReservasi');
+                if (tbody && resData.status === 'success') {
+                    if (resData.data.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="${role === 'admin' ? 6 : 5}" style="text-align: center; padding: 40px; color: #888; font-style: italic;">Belum ada riwayat pesanan. Yuk, booking kamar pertamamu sekarang!</td></tr>`;
+                    } else {
+                        tbody.innerHTML = '';
+                        let totalReservasi = 0, kamarAktif = 0, menungguBayar = 0;
+
+                        resData.data.forEach(item => {
+                            let row = '<tr>';
+                            if (role === 'admin') row += `<td>${item.User ? item.User.nama : '-'}</td>`;
+                            row += `<td>Kamar ${item.Room ? item.Room.nomor_kamar : '-'} (${item.Room ? item.Room.tipe_kamar : '-'})</td>`;
+                            
+                            row += `<td>${item.check_in}</td>`;
+                            row += `<td>${item.check_out}</td>`;
+                            
+                            let warnaStatus = item.status === 'pending' ? '#ffc107' : (item.status === 'confirmed' ? '#28a745' : (item.status === 'completed' ? '#00f2fe' : '#dc3545'));
+                            row += `<td><span style="font-weight:bold; color: ${warnaStatus};">${item.status.toUpperCase()}</span></td>`;
+                            
+                            if (role === 'admin') {
+                                if (item.status === 'pending') {
+                                    row += `<td>
+                                        <button onclick="ubahStatusBooking('${item.id}', 'confirmed')" class="btn-gold" style="padding:4px 8px; font-size:11px; margin-right:4px;">Setujui</button>
+                                        <button onclick="ubahStatusBooking('${item.id}', 'cancelled')" class="btn-danger" style="padding:4px 8px; font-size:11px;">Tolak</button>
+                                    </td>`;
+                                } else if (item.status === 'confirmed') {
+                                    row += `<td>
+                                        <button onclick="ubahStatusBooking('${item.id}', 'completed')" style="background:#00f2fe; color:#000; padding:4px 8px; font-size:11px; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">Checkout</button>
+                                    </td>`;
+                                } else {
+                                    row += `<td>-</td>`;
+                                }
+                            } else {
+                                if (item.status === 'pending') {
+                                    let checkInMs = new Date(item.check_in).getTime();
+                                    let checkOutMs = new Date(item.check_out).getTime();
+                                    let selisihHari = (checkOutMs - checkInMs) / (1000 * 3600 * 24);
+                                    let harga = item.Room ? item.Room.harga : 0;
+                                    let total = selisihHari > 0 ? selisihHari * harga : 0;
+                                    row += `<td><button onclick="bayarOnline('${item.id}', '${total}')" class="btn-gold" style="padding:4px 8px; font-size:11px;">Bayar</button></td>`;
+                                } else {
+                                    row += `<td>-</td>`;
+                                }
+                            }
+                            row += '</tr>';
+                            tbody.innerHTML += row;
+
+                            totalReservasi++;
+                            if (item.status === 'confirmed' || item.status === 'completed') kamarAktif++;
+                            if (item.status === 'pending') menungguBayar++;
+                        });
+                        
+                        if (role === 'admin') {
+                            document.getElementById('sumTotal').innerText = totalReservasi;
+                            document.getElementById('sumConfirmed').innerText = kamarAktif;
+                            document.getElementById('sumPending').innerText = menungguBayar;
+                        }
+
+                        if(role === 'customer') {
+                            document.getElementById('custSumTotal').innerText = `${resData.data.length} Kali`;
+                            document.getElementById('custSumPoints').innerText = `${resData.data.length * 100} Pts`; 
+                            const lastBooking = resData.data[resData.data.length - 1];
+                            document.getElementById('custSumStatus').innerText = lastBooking.status.toUpperCase();
+
+                            const selectRevRoom = document.getElementById('revRoomId');
+                            if (selectRevRoom) {
+                                selectRevRoom.innerHTML = '<option value="">-- Pilih Kamar (Telah Checkout) --</option>';
+                                resData.data.forEach(b => {
+                                    if (b.status === 'completed' && b.Room) {
+                                        selectRevRoom.innerHTML += `<option value="${b.Room.id}">Kamar ${b.Room.nomor_kamar}</option>`;
+                                    }
+                                });
+                            }
+                        }
+                    }
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        async function bayarOnline(bookingId, amount) {
+            const { value: paymentMethod } = await Swal.fire({
+                title: 'Pilih Metode Pembayaran',
+                input: 'select',
+                inputOptions: {
+                    'Transfer Bank': 'Transfer Bank (BCA/Mandiri)',
+                    'E-Wallet': 'E-Wallet (OVO/Dana/GoPay)',
+                    'Tunai': 'Tunai (Bayar di Resepsionis)'
+                },
+                inputPlaceholder: '-- Pilih Metode --',
+                showCancelButton: true,
+                confirmButtonText: 'Proses Bayar',
+                cancelButtonText: 'Batal',
+                confirmButtonColor: '#d4af37',
+                cancelButtonColor: '#dc3545'
+            });
+
+            if (paymentMethod) {
+                const token = localStorage.getItem('token');
+                const userId = localStorage.getItem('userId');
+                try {
+                    const res = await fetch('/api/payments', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify({ user_id: userId, booking_id: bookingId, amount: amount, payment_method: paymentMethod })
+                    });
+                    if(res.ok) {
+                        Swal.fire('Sukses', 'Pembayaran Berhasil Diproses! Silakan tunggu konfirmasi Admin.', 'success');
+                        muatTabelReservasi();
+                    } else {
+                        const data = await res.json();
+                        Swal.fire('Gagal', data.message || 'Pembayaran gagal diproses', 'error');
+                    }
+                } catch(e) { console.error(e); }
+            }
+        }
+
+        async function muatTabelPayment() {
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch('/api/payments', { headers: { 'Authorization': `Bearer ${token}` } });
+                const resData = await res.json();
+                
+                const tbody = document.getElementById('tablePayment');
+                let totalPendapatan = 0;
+
+                if (tbody && resData.status === 'success') {
+                    tbody.innerHTML = '';
+                    if (resData.data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px; color: #888;">Belum ada data pembayaran.</td></tr>';
+                        document.getElementById('sumPendapatan').innerText = 'Rp 0';
+                        return;
+                    }
+                    resData.data.forEach(pay => {
+                        let warnastatus = pay.status === 'success' ? '#28a745' : (pay.status === 'pending' ? '#ffc107' : '#dc3545');
+                        let row = `<tr>
+                            <td>#PAY-${pay.id}</td>
+                            <td>${pay.User ? pay.User.nama : 'Unknown'}</td>
+                            <td>Rp ${parseInt(pay.amount).toLocaleString('id-ID')}</td>
+                            <td>${pay.payment_method}</td>
+                            <td><span style="font-weight:bold; color: ${warnastatus};">${pay.status.toUpperCase()}</span></td>
+                            <td>
+                                <button onclick="bukaEditPayment('${pay.id}', '${pay.payment_method}', '${pay.status}')" class="btn-gold" style="padding:4px 8px; font-size:11px;">Edit</button>
+                                <button onclick="hapusPayment('${pay.id}')" class="btn-danger" style="padding:4px 8px; font-size:11px;">Hapus</button>
+                            </td>
+                        </tr>`;
+                        tbody.innerHTML += row;
+
+                        if (pay.status === 'success') {
+                            totalPendapatan += parseInt(pay.amount);
+                        }
+                    });
+
+                    const sumPendapatan = document.getElementById('sumPendapatan');
+                    if(sumPendapatan) sumPendapatan.innerText = 'Rp ' + totalPendapatan.toLocaleString('id-ID');
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        async function muatTabelUser() {
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch('/users', { headers: { 'Authorization': `Bearer ${token}` } });
+                const resData = await res.json();
+                
+                const tbody = document.getElementById('tableUser');
+                if (tbody && resData.status === 'success') {
+                    tbody.innerHTML = '';
+                    if (resData.data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 40px; color:#888;">Belum ada data customer.</td></tr>';
+                        return;
+                    }
+                    resData.data.forEach(user => {
+                        let roleColor = user.role === 'admin' ? '#d4af37' : '#00f2fe';
+                        let row = `<tr>
+                            <td>${user.nama}</td>
+                            <td>${user.email}</td>
+                            <td><span style="color: ${roleColor}; font-weight: bold;">${user.role.toUpperCase()}</span></td>
+                            <td><button class="btn-danger" style="padding:4px 8px; font-size:11px;">Hapus</button></td>
+                        </tr>`;
+                        tbody.innerHTML += row;
+                    });
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        async function ubahStatusBooking(id, status) {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/reservasi/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ status })
+                });
+                if (response.ok) {
+                    Swal.fire('Sukses', 'Status reservasi diperbarui', 'success');
+                    muatTabelReservasi();
+                    muatDropdownPilihan();
+                    muatTabelKamar();
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        function bukaEditPayment(id, metode, status) {
+            document.getElementById('sectionEditPayment').style.display = 'block';
+            document.getElementById('editIdPayment').value = id;
+            document.getElementById('editMetodePayment').value = metode;
+            document.getElementById('editStatusPayment').value = status;
+        }
+
+        function batalEditPayment() {
+            document.getElementById('sectionEditPayment').style.display = 'none';
+            document.getElementById('formEditPayment').reset();
+        }
+
+        async function hapusPayment(id) {
+            if(!confirm('Yakin ingin menghapus riwayat pembayaran ini?')) return;
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch(`/api/payments/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if(res.ok) {
+                    Swal.fire('Terhapus', 'Data pembayaran berhasil dihapus.', 'success');
+                    muatTabelPayment();
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        function logout() {
+            // PERBAIKAN: HANYA HAPUS DATA LOGIN, BUKAN DATA REVIEW (LOCALSTORAGE DEMO MAGIC)
+            localStorage.removeItem('token');
+            localStorage.removeItem('userId');
+            localStorage.removeItem('role');
+            localStorage.removeItem('nama');
+            
+            Swal.fire({ icon: 'success', title: 'Logout Berhasil', text: 'Anda telah keluar dari sistem.', confirmButtonColor: '#d4af37', background: '#1a1a2e', color: '#fff' })
+            .then(() => { window.location.reload(); });
+        }
+
+        // ==========================================
+        // 3. JURUS DEMO MAGIC: LOCALSTORAGE UNTUK ULASAN
+        // ==========================================
+        function muatTabelReview() {
+            const tbody = document.getElementById('tableReview');
+            if (!tbody) return;
+
+            let reviews = JSON.parse(localStorage.getItem('demoReviews')) || [];
+            const role = localStorage.getItem('role');
+
+            if (reviews.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="${role === 'admin' ? 5 : 4}" style="text-align: center; padding: 40px; color: #888; font-style: italic;">Belum ada ulasan yang diberikan.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = '';
+            reviews.forEach(rev => {
+                let stars = '⭐'.repeat(parseInt(rev.rating));
+                let row = `<tr>`;
+                
+                if (role === 'admin') { row += `<td>${rev.nama}</td>`; }
+                
+                let aksiHtml = role === 'admin' ? `<button onclick="hapusReview('${rev.id}')" class="btn-danger" style="padding:4px 8px; font-size:11px;">Hapus</button>` : '-';
+                
+                row += `<td>${rev.nomorKamar}</td>
+                        <td style="white-space:nowrap;">${stars}</td>
+                        <td>${rev.komentar}</td>
+                        <td>${aksiHtml}</td>
+                    </tr>`;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function hapusReview(id) {
+            let reviews = JSON.parse(localStorage.getItem('demoReviews')) || [];
+            reviews = reviews.filter(r => r.id !== id);
+            localStorage.setItem('demoReviews', JSON.stringify(reviews));
+            Swal.fire('Terhapus', 'Ulasan berhasil dihapus.', 'success');
+            muatTabelReview();
+        }
+
+        // ==========================================
+        // 4. KALKULATOR HARGA DJIBRAN
+        // ==========================================
+        function hitungTotal() {
+            const resRoomId = document.getElementById('resRoomId');
+            const resCheckIn = document.getElementById('resCheckIn');
+            const resCheckOut = document.getElementById('resCheckOut');
+            const labelTotalHarga = document.getElementById('labelTotalHarga');
+
+            if (resRoomId && resCheckIn.value && resCheckOut.value && labelTotalHarga) {
+                const checkInDate = new Date(resCheckIn.value);
+                const checkOutDate = new Date(resCheckOut.value);
+                const selisihWaktu = checkOutDate.getTime() - checkInDate.getTime();
+                const selisihHari = selisihWaktu / (1000 * 3600 * 24); 
+
+                if (selisihHari > 0) {
+                    const selectedOption = resRoomId.options[resRoomId.selectedIndex];
+                    const hargaKamar = parseInt(selectedOption.getAttribute('data-harga')) || 0;
+                    const total = selisihHari * hargaKamar;
+                    labelTotalHarga.innerText = 'Rp ' + total.toLocaleString('id-ID');
+                } else {
+                    labelTotalHarga.innerText = 'Tanggal tidak valid';
+                }
+            } else if (labelTotalHarga) {
+                labelTotalHarga.innerText = 'Rp 0';
+            }
+        }
+
+        // ==========================================
+        // 5. EVENT LISTENER UTAMA
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            const togglePassword = document.getElementById('togglePassword');
+            const regPasswordInput = document.getElementById('password');
+            if (togglePassword && regPasswordInput) {
+                togglePassword.addEventListener('click', function () {
+                    const type = regPasswordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                    regPasswordInput.setAttribute('type', type);
+                    this.textContent = type === 'password' ? 'visibility_off' : 'visibility';
+                });
+            }
+
+            const toggleLoginPassword = document.getElementById('toggleLoginPassword');
+            const loginPasswordInput = document.getElementById('loginPassword');
+            if (toggleLoginPassword && loginPasswordInput) {
+                toggleLoginPassword.addEventListener('click', function () {
+                    const type = loginPasswordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                    loginPasswordInput.setAttribute('type', type);
+                    this.textContent = type === 'password' ? 'visibility_off' : 'visibility';
+                });
+            }
+
+            const resRoomId = document.getElementById('resRoomId');
+            const resCheckIn = document.getElementById('resCheckIn');
+            const resCheckOut = document.getElementById('resCheckOut');
+            if (resRoomId) resRoomId.addEventListener('change', hitungTotal);
+            if (resCheckIn) resCheckIn.addEventListener('change', hitungTotal);
+            if (resCheckOut) resCheckOut.addEventListener('change', hitungTotal);
+
+            const formLogin = document.getElementById('formLogin');
+            const formUser = document.getElementById('formUser');
+            const formReservasi = document.getElementById('formReservasi');
+            const formRoom = document.getElementById('formRoom');
+            const formEditRoom = document.getElementById('formEditRoom');
+            const formEditPayment = document.getElementById('formEditPayment');
+            const formTambahReview = document.getElementById('formTambahReview');
+
+            const savedToken = localStorage.getItem('token');
+            const savedRole = localStorage.getItem('role');
+            const savedNama = localStorage.getItem('nama');
+
+            if (savedToken && savedRole && savedNama) {
+                document.getElementById('authWrapper').style.display = 'none';
+                document.getElementById('dashboardWrapper').style.display = 'block';
+                terapkanHakAksesUI(savedRole, savedNama);
+                switchTab('tab-dashboard');
+            }
+
+            const signUpBtn = document.getElementById('signUpBtn');
+            const signInBtn = document.getElementById('signInBtn');
+            if (signUpBtn && signInBtn) {
+                signUpBtn.addEventListener('click', () => document.getElementById('authContainer').classList.add('right-panel-active'));
+                signInBtn.addEventListener('click', () => document.getElementById('authContainer').classList.remove('right-panel-active'));
+            }
+
+            if (formReservasi) {
+                formReservasi.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const role = localStorage.getItem('role');
+                    const targetUserId = role === 'customer' ? localStorage.getItem('userId') : document.getElementById('resUserId').value;
+
+                    if (role === 'admin' && (!targetUserId || targetUserId === "")) {
+                        Swal.fire('Tunggu Dulu!', 'Silakan pilih nama Customer di dropdown terlebih dahulu.', 'warning');
+                        return; 
+                    }
+
+                    const roomId = document.getElementById('resRoomId').value;
+                    const checkIn = document.getElementById('resCheckIn').value;
+                    const checkOut = document.getElementById('resCheckOut').value;
+                    const token = localStorage.getItem('token');
+
+                    try {
+                        const response = await fetch('/api/reservasi', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                            body: JSON.stringify({ userId: targetUserId, roomId, checkIn, checkOut })
+                        });
+                        const data = await response.json();
+                        
+                        if (response.ok || data.status === 'success') {
+                            Swal.fire('Booking Terkirim!', 'Kamar berhasil dipesan. Silakan selesaikan pembayaran di tabel.', 'success');
+                            formReservasi.reset();
+                            if(document.getElementById('labelTotalHarga')) document.getElementById('labelTotalHarga').innerText = 'Rp 0';
+                            
+                            muatDropdownPilihan();
+                            muatTabelReservasi();
+                        } else {
+                            Swal.fire('Gagal', data.message || 'Error membuat reservasi', 'error');
+                        }
+                    } catch (err) { Swal.fire('Oops...', 'Koneksi server terputus', 'error'); }
+                });
+            }
+
+            if (formTambahReview) {
+                formTambahReview.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    
+                    const revRoomSelect = document.getElementById('revRoomId');
+                    const revRating = document.getElementById('revRating').value;
+                    const revComment = document.getElementById('revComment').value;
+                    
+                    if(revRoomSelect.selectedIndex <= 0) {
+                        Swal.fire('Peringatan', 'Silakan pilih kamar yang telah dicheckout terlebih dahulu!', 'warning');
+                        return;
+                    }
+
+                    const roomText = revRoomSelect.options[revRoomSelect.selectedIndex].text;
+                    const namaCustomer = localStorage.getItem('nama') || 'Tamu';
+
+                    let reviews = JSON.parse(localStorage.getItem('demoReviews')) || [];
+                    reviews.push({
+                        id: Date.now().toString(),
+                        nama: namaCustomer,
+                        nomorKamar: roomText,
+                        rating: revRating,
+                        komentar: revComment
+                    });
+                    
+                    localStorage.setItem('demoReviews', JSON.stringify(reviews));
+
+                    Swal.fire('Sukses', 'Ulasan berhasil dikirim! Terima kasih atas masukan Anda.', 'success');
+                    formTambahReview.reset();
+                    muatTabelReview();
+                });
+            }
+
+            if (formRoom) {
+                formRoom.addEventListener('submit', async (e) => {
+                    e.preventDefault(); 
+                    const nomor_kamar = document.getElementById('noKamar').value;
+                    const tipe_kamar = document.getElementById('tipeKamar').value;
+                    const harga = document.getElementById('hargaKamar').value;
+                    const foto_kamar = document.getElementById('fotoKamarInput').value;
+                    const token = localStorage.getItem('token');
+
+                    try {
+                        const response = await fetch('/api/rooms', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                            body: JSON.stringify({ nomor_kamar, tipe_kamar, harga, foto_kamar, status: 'tersedia' })
+                        });
+                        
+                        const data = await response.json();
+
+                        if (response.ok || data.status === 'success') {
+                            Swal.fire('Sukses!', 'Kamar Baru Berhasil Ditambahkan.', 'success');
+                            formRoom.reset();
+                            muatTabelKamar(); 
+                            muatDropdownPilihan(); 
+                        } else {
+                            Swal.fire('Gagal', data.message || 'Gagal menyimpan ke database.', 'error');
+                        }
+                    } catch (err) { Swal.fire('Oops...', 'Koneksi terputus.', 'error'); }
+                });
+            }
+
+            if (formEditRoom) {
+                formEditRoom.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const id = document.getElementById('editIdKamar').value;
+                    const nomor_kamar = document.getElementById('editNoKamar').value;
+                    const tipe_kamar = document.getElementById('editTipeKamar').value;
+                    const harga = document.getElementById('editHargaKamar').value;
+                    const foto_kamar = document.getElementById('editFotoKamar').value;
+                    const status = document.getElementById('editStatusKamar').value;
+                    const token = localStorage.getItem('token');
+
+                    try {
+                        const res = await fetch(`/api/rooms/${id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                            body: JSON.stringify({ nomor_kamar, tipe_kamar, harga, foto_kamar, status })
+                        });
+                        if(res.ok) {
+                            Swal.fire('Sukses', 'Data Kamar Diupdate!', 'success');
+                            batalEditRoom();
+                            muatTabelKamar();
+                            muatDropdownPilihan();
+                        }
+                    } catch(e) { console.error(e); }
+                });
+            }
+
+            if (formEditPayment) {
+                formEditPayment.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const id = document.getElementById('editIdPayment').value;
+                    const payment_method = document.getElementById('editMetodePayment').value;
+                    const status = document.getElementById('editStatusPayment').value;
+                    const token = localStorage.getItem('token');
+
+                    try {
+                        const res = await fetch(`/api/payments/${id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                            body: JSON.stringify({ payment_method, status })
+                        });
+                        if(res.ok) {
+                            Swal.fire('Sukses', 'Status Pembayaran Terupdate', 'success');
+                            batalEditPayment();
+                            muatTabelPayment();
+                        }
+                    } catch(e) { console.error(e); }
+                });
+            }
+
+            if (formUser) {
+                formUser.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    try {
+                        const response = await fetch('/users', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ 
+                                nama: document.getElementById('name').value, 
+                                email: document.getElementById('email').value, 
+                                password: regPasswordInput.value 
+                            })
+                        });
+                        const data = await response.json();
+                        if (response.ok || data.status === 'success') {
+                            Swal.fire({icon: 'success', title: 'Berhasil!', text: 'Silakan Sign In.', confirmButtonColor: '#d4af37', background: '#1a1a2e', color: '#fff'}).then(() => {
+                                formUser.reset();
+                                document.getElementById('authContainer').classList.remove('right-panel-active');
+                            });
+                        }
+                    } catch (error) {}
+                });
+            }
+
+            if (formLogin) {
+                formLogin.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    try {
+                        const response = await fetch('/api/auth/login', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ 
+                                email: document.getElementById('loginEmail').value, 
+                                password: loginPasswordInput.value 
+                            })
+                        });
+                        const data = await response.json();
+                        if (response.ok) {
+                            Swal.fire({icon: 'success', title: 'Login Berhasil!', text: `Selamat datang, ${data.nama || 'User'}`, confirmButtonColor: '#d4af37', background: '#1a1a2e', color: '#fff'}).then(() => {
+                                localStorage.setItem('token', data.token);
+                                localStorage.setItem('userId', data.id);
+                                localStorage.setItem('role', data.role);
+                                localStorage.setItem('nama', data.nama);
+                                
+                                document.getElementById('authWrapper').style.display = 'none';
+                                document.getElementById('dashboardWrapper').style.display = 'block';
+                                
+                                terapkanHakAksesUI(data.role, data.nama);
+                                formLogin.reset();
+                                switchTab('tab-dashboard');
+                            });
+                        } else {
+                            Swal.fire({icon: 'error', title: 'Gagal', text: 'Email atau password salah!', confirmButtonColor: '#dc3545', background: '#1a1a2e', color: '#fff'});
+                        }
+                    } catch (error) {}
+                });
+            }
+        });
+    </script>
+</body>
+</html>
