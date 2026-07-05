@@ -52,7 +52,7 @@ app.use(reservasiRoutes);
 app.use(paymentRoutes);
 app.use(reviewRoutes);
 
-Sequelize.sync({ force: true })
+Sequelize.sync({ alter: true })
   .then(() => {
     console.log(" Tabel di Database berhasil disinkronisasi otomatis!");
     httpServer.listen(port, () => console.log(` Server & Socket.io berjalan di http://localhost:${port}`));
