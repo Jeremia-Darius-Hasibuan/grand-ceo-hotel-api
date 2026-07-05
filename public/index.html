@@ -797,7 +797,7 @@
                             <td>${user.nama}</td>
                             <td>${user.email}</td>
                             <td><span style="color: ${roleColor}; font-weight: bold;">${user.role.toUpperCase()}</span></td>
-                            <td><button class="btn-danger" style="padding:4px 8px; font-size:11px;">Hapus</button></td>
+                            <td><button onclick="hapusUser('${user.id}')" class="btn-danger" style="padding:4px 8px; font-size:11px;">Hapus</button></td>
                         </tr>`;
                         tbody.innerHTML += row;
                     });
