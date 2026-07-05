@@ -782,7 +782,16 @@
                         tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 40px; color:#888;">Belum ada data customer.</td></tr>';
                         return;
                     }
-                    resData.data.forEach(user => {
+
+                    let sortedUsers = resData.data.sort((a, b) => {
+                       if (a.role < b.role) return -1;
+                        if (a.role > b.role) return 1;
+                        if (a.nama.toLowerCase() < b.nama.toLowerCase()) return -1;
+                        if (a.nama.toLowerCase() > b.nama.toLowerCase()) return 1;
+                        return 0;
+                    });
+
+                    sortedUsers.forEach(user => {
                         let roleColor = user.role === 'admin' ? '#d4af37' : '#00f2fe';
                         let row = `<tr>
                             <td>${user.nama}</td>
