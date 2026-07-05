@@ -805,6 +805,24 @@
             } catch (e) { console.error(e); }
         }
 
+        async function hapusUser(id) {
+            if(!confirm('Yakin ingin menghapus customer ini dari sistem?')) return;
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch(`/users/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if(res.ok) {
+                    Swal.fire('Terhapus', 'Data customer berhasil dihapus.', 'success');
+                    muatTabelUser(); 
+                } else {
+                    const data = await res.json();
+                    Swal.fire('Gagal', data.message || 'Gagal menghapus user', 'error');
+                }
+            } catch (e) { console.error(e); }
+        }
+
         async function ubahStatusBooking(id, status) {
             try {
                 const token = localStorage.getItem('token');
