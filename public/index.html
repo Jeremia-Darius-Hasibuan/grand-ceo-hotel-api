@@ -97,7 +97,7 @@
                     <div class="overlay-panel overlay-right">
                         <span class="material-symbols-outlined" style="font-size: 50px; margin-bottom: 10px;">hotel_class</span>
                         <h1 style="color: #1a1a2e;">Halo, CEO!</h1>
-                        <p style="color: #1a1a2e; font-weight: 500;">Belum punya akun? Daftarkan diri Anda dan mulai kelola hotel.</p>
+                        <p style="color: #1a1a2e; font-weight: 500;">Belum punya akun admin? Daftarkan diri Anda dan mulai kelola hotel.</p>
                         <button class="ghost" id="signUpBtn" style="border-color: #1a1a2e; color: #1a1a2e;">Sign Up</button>
                     </div>
                 </div>
@@ -396,13 +396,18 @@
 
     <script>
         // ==========================================
-        // 1. FITUR NOTIFIKASI SOCKET.IO & UI DASAR
+        // 1. FITUR NOTIFIKASI SOCKET.IO (Diperkuat untuk Server Cloud & Anti-Bentrok)
         // ==========================================
-        const socket = io();
+        const socket = io(window.location.origin, {
+            transports: ['websocket', 'polling']
+        });
+        
         window.notifList = [];
+        window.currentRole = localStorage.getItem('role'); // Menyimpan role mandiri tiap tab
 
         socket.on("pesananBaru", (data) => {
-            if (localStorage.getItem('role') !== 'admin') return; 
+            // Gunakan window.currentRole agar aman dari overwrite jika buka 2 tab di satu browser
+            if (window.currentRole !== 'admin') return; 
 
             window.notifList.push(data);
             const badge = document.getElementById('badgeNotif');
@@ -410,7 +415,11 @@
                 badge.style.display = 'inline-block';
                 badge.innerText = window.notifList.length;
             }
-            Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, icon: 'info', title: 'Ada Pesanan Baru!' });
+            
+            // Efek suara lonceng masuk!
+            try { new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play(); } catch(e) {}
+            
+            Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 5000, icon: 'info', title: '🔔 Pesanan Kamar Baru Masuk!' });
             muatTabelReservasi();
         });
 
@@ -418,7 +427,7 @@
             if(!window.notifList || window.notifList.length === 0) {
                 Swal.fire({ icon: 'info', title: 'Tidak Ada Notifikasi', text: 'Belum ada pesan baru untuk Anda saat ini.', background: '#1a1a2e', color: '#fff', confirmButtonColor: '#d4af37' });
             } else {
-                let msgs = window.notifList.map(n => `<b>ID Pesanan: #${n.bookingId}</b> | Check-in: ${n.checkIn}`).join('<br><hr>');
+                let msgs = window.notifList.map(n => `<b>ID Pesanan: #${n.bookingId || '-'}</b> | Check-in: ${n.checkIn || '-'}`).join('<br><hr>');
                 Swal.fire({ title: 'Notifikasi Pesanan', html: msgs, icon: 'info' }).then(() => {
                     window.notifList = [];
                     const badge = document.getElementById('badgeNotif');
@@ -441,6 +450,7 @@
         }
 
         function terapkanHakAksesUI(role, nama) {
+            window.currentRole = role; // Pastikan memori tab terupdate
             document.getElementById('welcomeTitle').innerText = `Welcome To Dashboard, ${nama}`;
             
             const thCustomerCol = document.getElementById('thCustomerCol');
@@ -453,7 +463,7 @@
                 document.getElementById('customerWelcomeBanner').style.display = 'block';
                 document.getElementById('paymentSectionBox').style.display = 'none';
                 document.getElementById('menuCustomerTab').style.display = 'none';
-                document.getElementById('formRoom').style.display = 'none'; // Sembunyikan form tambah kamar
+                document.getElementById('formRoom').style.display = 'none'; 
                 document.getElementById('customerSelectGroup').style.display = 'none';
                 document.getElementById('bookingFormTitle').innerText = "Buat Pesanan Kamar";
                 document.getElementById('bookingTableTitle').innerText = "Riwayat Pesanan Saya";
@@ -485,8 +495,6 @@
             muatDropdownPilihan();
             muatTabelReservasi();
             muatTabelReview(); 
-            
-            // PERBAIKAN: KAMAR DITAMPILKAN KE SEMUA ROLE
             muatTabelKamar(); 
 
             if (role === 'admin') {
@@ -501,7 +509,7 @@
         async function muatTabelKamar() {
             try {
                 const token = localStorage.getItem('token');
-                const role = localStorage.getItem('role'); // Ambil role untuk cek tombol
+                const role = localStorage.getItem('role'); 
                 const res = await fetch('/api/rooms', { headers: { 'Authorization': `Bearer ${token}` } }); 
                 const resData = await res.json();
                 
@@ -518,7 +526,6 @@
                         let textStatus = room.status.charAt(0).toUpperCase() + room.status.slice(1);
                         let warnaStatus = room.status.toLowerCase() === 'tersedia' ? '#28a745' : '#dc3545';
 
-                        // PERBAIKAN: Sembunyikan tombol Edit/Hapus jika yang login Customer
                         let actionButtons = '-';
                         if (role === 'admin') {
                             actionButtons = `
@@ -769,6 +776,7 @@
             } catch (e) { console.error(e); }
         }
 
+        // --- FITUR SORTING OTOMATIS & HAPUS USER ---
         async function muatTabelUser() {
             try {
                 const token = localStorage.getItem('token');
@@ -784,7 +792,7 @@
                     }
 
                     let sortedUsers = resData.data.sort((a, b) => {
-                       if (a.role < b.role) return -1;
+                        if (a.role < b.role) return -1;
                         if (a.role > b.role) return 1;
                         if (a.nama.toLowerCase() < b.nama.toLowerCase()) return -1;
                         if (a.nama.toLowerCase() > b.nama.toLowerCase()) return 1;
@@ -868,11 +876,11 @@
         }
 
         function logout() {
-            // PERBAIKAN: HANYA HAPUS DATA LOGIN, BUKAN DATA REVIEW (LOCALSTORAGE DEMO MAGIC)
             localStorage.removeItem('token');
             localStorage.removeItem('userId');
             localStorage.removeItem('role');
             localStorage.removeItem('nama');
+            window.currentRole = null; 
             
             Swal.fire({ icon: 'success', title: 'Logout Berhasil', text: 'Anda telah keluar dari sistem.', confirmButtonColor: '#d4af37', background: '#1a1a2e', color: '#fff' })
             .then(() => { window.location.reload(); });
